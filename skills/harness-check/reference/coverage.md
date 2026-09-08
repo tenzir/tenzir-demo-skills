@@ -23,12 +23,10 @@ are not.
 | `permission_mode_changed` | call EnterPlanMode then ExitPlanMode; only modes the agent cannot set need the interactive control | automatic for plan, user-only for the rest |
 | `user` records wrapping `<bash-input>`/`<bash-stdout>` (shell typed with `!`) | the user types a `!`-prefixed shell command | user-only interactive control |
 | `plugin_loaded` | load a real installed or session-scoped fixture plugin | automatic with `--plugin-dir` in a child Claude session |
-| `hook_registered` | start a real child Claude session with the fixture hook configuration | automatic |
-| `hook_registered` (broad) | the fixture registers PreToolUse, PostToolUse, PostToolUseFailure, UserPromptSubmit, SessionStart, SessionEnd, Stop, SubagentStart, SubagentStop, PreCompact, PostCompact, Notification, PermissionRequest, PermissionDenied, PreModelSwitch, PostModelSwitch, ConfigChange, WorktreeCreate, and WorktreeRemove hooks, all recognized by the installed CLI | automatic at session start |
-| `hook_execution_start` / `hook_execution_complete` | PreToolUse, PostToolUse, UserPromptSubmit, SessionStart, and Stop fire in a normal child; the rest fire only on their triggering action and are recorded from the hook log as best-effort skips when absent | automatic, most events conditional |
+| `hook_registered` | the fixture registers the reliably-firing hooks (PreToolUse, PostToolUse, UserPromptSubmit, SessionStart, SessionEnd, Stop) plus a security-relevant subset (PermissionRequest, PermissionDenied, PreModelSwitch, PostModelSwitch, ConfigChange, WorktreeCreate, WorktreeRemove) | automatic at session start |
+| `hook_execution_start` / `hook_execution_complete` | PreToolUse, PostToolUse, UserPromptSubmit, SessionStart, and Stop fire in a normal child; the security-subset hooks fire only on their triggering action and are recorded from the hook log as best-effort skips when absent | automatic, subset conditional |
 | `api_error` | a child whose API base URL points at a closed loopback port; the first model request fails to connect | automatic, no credential sent |
 | `user_prompt` / `tool_decision` content shapes | the child repeats a trivial turn with prompt and tool-detail logging redacted and then verbose | automatic |
-| `retention_sweep` | context compaction, reached only if the session compacts | conditional; the PreCompact hook marks it best-effort |
 | cost, token-usage, session-count, lines-of-code, code-edit, and commit metrics | emitted on the natural session activity; enhanced telemetry and a metric exporter must be enabled | automatic startup/interval observation |
 | `log_format` = `OTLP/gRPC` \| `OTLP/HTTP` \| `OTLP/JSON` | run the child once per transport with `run-child --transport grpc\|http\|json`; a run emits only its selected transport | conditional, one transport per run |
 | session resume | the child persists a fixed session id, then a second `--resume` reopens it | automatic when persistence is available |
@@ -46,7 +44,7 @@ are not.
 | `codex.tool_decision` | each native tool call; include allowed and denied decisions | automatic except the user's allow/deny choice |
 | `codex.tool_result` | successful and failing native calls | automatic |
 | `codex.sandbox_outcome` | run shell work through the actual Codex sandbox; vary it with `run-child --sandbox read-only\|workspace-write\|danger-full-access` for distinct outcomes | automatic, one policy per run |
-| Codex hook registration and firing | a run-local `hooks.json` registers SessionStart, SessionEnd, PreToolUse, PostToolUse, PermissionRequest, PreCompact, PostCompact, UserPromptSubmit, SubagentStart, SubagentStop, Stop, and Interrupt; `--dangerously-bypass-hook-trust` runs the disposable fixture without persisted trust, and the hook log proves which fired | automatic; most events conditional |
+| Codex hook registration and firing | a run-local `hooks.json` registers the firing core (SessionStart, SessionEnd, PreToolUse, PostToolUse, UserPromptSubmit, Stop) plus PermissionRequest; `--dangerously-bypass-hook-trust` runs the disposable fixture without persisted trust, and the hook log proves which fired | automatic; PermissionRequest and SessionEnd conditional |
 | `codex.skill.injected` | invoking this skill | automatic |
 | `codex.tool.call` | native tool calls | automatic |
 | `list_tools_for_server` | let the child Codex session discover the bundled fixture server | automatic |

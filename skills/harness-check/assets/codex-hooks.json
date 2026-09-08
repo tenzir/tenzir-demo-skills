@@ -43,62 +43,12 @@
         ]
       }
     ],
-    "PermissionRequest": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 __SKILL__/assets/hook-gate.py mark PermissionRequest"
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 __SKILL__/assets/hook-gate.py mark PreCompact"
-          }
-        ]
-      }
-    ],
-    "PostCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 __SKILL__/assets/hook-gate.py mark PostCompact"
-          }
-        ]
-      }
-    ],
     "UserPromptSubmit": [
       {
         "hooks": [
           {
             "type": "command",
             "command": "python3 __SKILL__/assets/hook-gate.py mark UserPromptSubmit"
-          }
-        ]
-      }
-    ],
-    "SubagentStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 __SKILL__/assets/hook-gate.py mark SubagentStart"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 __SKILL__/assets/hook-gate.py mark SubagentStop"
           }
         ]
       }
@@ -113,12 +63,12 @@
         ]
       }
     ],
-    "Interrupt": [
+    "PermissionRequest": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "python3 __SKILL__/assets/hook-gate.py mark Interrupt"
+            "command": "python3 __SKILL__/assets/hook-gate.py mark PermissionRequest"
           }
         ]
       }

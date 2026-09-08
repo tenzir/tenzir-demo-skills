@@ -28,8 +28,9 @@ with:
 - `--settings` pointing at a run-local copy of
   `<skill>/assets/claude-settings.json` with `__SKILL__` resolved to the
   absolute skill path. That settings file registers PreToolUse, PostToolUse,
-  UserPromptSubmit, SessionStart, SessionEnd, Stop, and SubagentStop fixture
-  hooks and a `permissions.deny` rule;
+  UserPromptSubmit, SessionStart, SessionEnd, and Stop hooks, a security-relevant
+  subset (PermissionRequest, PermissionDenied, PreModelSwitch, PostModelSwitch,
+  ConfigChange, WorktreeCreate, WorktreeRemove), and a `permissions.deny` rule;
 - `--strict-mcp-config --mcp-config` containing a stdio server whose command is
   `python3` and whose only argument is `<skill>/assets/mcp-server.py`;
 - `--allowedTools Bash,WebFetch,mcp__harness-check__harness_echo,`
@@ -57,8 +58,8 @@ so the first model request fails and drives the `api_error` path without
 sending a usable credential anywhere reachable; and one trivial turn repeated
 with `OTEL_LOG_USER_PROMPTS` and `OTEL_LOG_TOOL_DETAILS` first redacted and
 then verbose, so both content shapes appear in one run. The settings fixture
-also registers PreCompact and Notification hooks; these fire only if the
-session compacts or raises a notification, so a miss is recorded as a skip.
+registers the security-subset hooks (permission, model switch, config change,
+worktree); these fire only on their triggering action, so a miss is a skip.
 
 Transport is conditional: pass `run-child --transport grpc|http|json` to force
 `OTEL_EXPORTER_OTLP_PROTOCOL`, since one run emits only its selected
@@ -90,9 +91,8 @@ passes it with `-c hooks="<path>"`, and adds `--dangerously-bypass-hook-trust`
 so the disposable fixture runs without persisted trust. Each hook invokes the
 same `hook-gate.py` marker with the event name passed explicitly, so the hook
 log records which of SessionStart, SessionEnd, PreToolUse, PostToolUse,
-PermissionRequest, PreCompact, PostCompact, UserPromptSubmit, SubagentStart,
-SubagentStop, Stop, and Interrupt actually fired. Only a few fire in an
-ephemeral exec child; the rest are best-effort. Do not use
+UserPromptSubmit, Stop, and PermissionRequest actually fired. Only a few fire
+in an ephemeral exec child; the rest are best-effort. Do not use
 `--ignore-user-config`: startup observations for the user's real enabled apps,
 plugins, remote-plugin posture, approval policy, and sandbox policy are part
 of the workload. The overrides must not write the user's config.

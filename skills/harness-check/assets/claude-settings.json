@@ -57,47 +57,7 @@
         ]
       }
     ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 __SKILL__/assets/hook-gate.py mark"
-          }
-        ]
-      }
-    ],
     "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 __SKILL__/assets/hook-gate.py mark"
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 __SKILL__/assets/hook-gate.py mark"
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 __SKILL__/assets/hook-gate.py mark"
-          }
-        ]
-      }
-    ],
-    "PostCompact": [
       {
         "hooks": [
           {
@@ -118,16 +78,6 @@
       }
     ],
     "PermissionDenied": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 __SKILL__/assets/hook-gate.py mark"
-          }
-        ]
-      }
-    ],
-    "SubagentStart": [
       {
         "hooks": [
           {
@@ -179,17 +129,6 @@
     ],
     "WorktreeRemove": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 __SKILL__/assets/hook-gate.py mark"
-          }
-        ]
-      }
-    ],
-    "PostToolUseFailure": [
-      {
-        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",

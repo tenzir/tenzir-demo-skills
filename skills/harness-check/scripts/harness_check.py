@@ -927,24 +927,21 @@ def cmd_run_child(args):
         raise SystemExit(1)
 
 
+# The hooks the fixture registers: the ones that reliably fire in a headless
+# child, plus a small security-relevant subset (permission, config change,
+# model switch, worktree). Padding events that only inflate the registration
+# count without a security signal are intentionally left out.
 HOOK_EVENTS = {
+    # Reliably fire in a normal child.
     "PreToolUse": "pre-tool decision hook",
     "PostToolUse": "post-tool hook",
     "UserPromptSubmit": "prompt-submit hook",
     "SessionStart": "session-start hook",
     "SessionEnd": "session-end hook",
     "Stop": "stop hook",
-    "SubagentStop": "subagent-stop hook",
-    "PreCompact": "pre-compact hook",
-    "Notification": "notification hook",
-    # Additional events recognized by Claude Code 2.1.260. Registration always
-    # emits a hook_registered event; firing depends on the child taking the
-    # matching action, so these are best-effort below.
-    "PostToolUseFailure": "post-tool-failure hook",
-    "PostCompact": "post-compact hook",
+    # Security-relevant subset; fire only on their triggering action.
     "PermissionRequest": "permission-request hook",
     "PermissionDenied": "permission-denied hook",
-    "SubagentStart": "subagent-start hook",
     "PreModelSwitch": "pre-model-switch hook",
     "PostModelSwitch": "post-model-switch hook",
     "ConfigChange": "config-change hook",
@@ -952,39 +949,29 @@ HOOK_EVENTS = {
     "WorktreeRemove": "worktree-remove hook",
 }
 
-# Hooks that fire only under a condition this short child rarely reaches
-# (a subagent lifecycle, the session ending inside the captured window,
-# context compaction, a notification, a permission prompt, a model switch, a
-# config change, or a worktree op). Registration still counts; a firing miss
-# is a clean skip, not a failure.
+# Of the kept hooks, those that fire only when the child takes the matching
+# action (a permission prompt, a model switch, a config change, a worktree op,
+# or the session ending inside the captured window). A firing miss is a clean
+# skip, not a failure; registration still counts.
 BEST_EFFORT_HOOKS = {
-    "SubagentStop", "SessionEnd", "PreCompact", "Notification",
-    "PostToolUseFailure", "PostCompact", "PermissionRequest",
-    "PermissionDenied", "SubagentStart", "PreModelSwitch", "PostModelSwitch",
-    "ConfigChange", "WorktreeCreate", "WorktreeRemove",
+    "SessionEnd", "PermissionRequest", "PermissionDenied", "PreModelSwitch",
+    "PostModelSwitch", "ConfigChange", "WorktreeCreate", "WorktreeRemove",
 }
 
 
-# Codex 0.153.4 hook events, registered through a run-local hooks.json. Only a
-# few fire in an ephemeral exec child; the rest are best-effort.
+# Codex 0.153.4 hooks: the firing core plus the one security-relevant event
+# Codex exposes (permission request). Codex has no model-switch, worktree, or
+# config-change hook, so the subset is smaller than Claude's.
 CODEX_HOOK_EVENTS = {
     "SessionStart": "session-start hook",
     "SessionEnd": "session-end hook",
     "PreToolUse": "pre-tool hook",
     "PostToolUse": "post-tool hook",
-    "PermissionRequest": "permission-request hook",
-    "PreCompact": "pre-compact hook",
-    "PostCompact": "post-compact hook",
     "UserPromptSubmit": "prompt-submit hook",
-    "SubagentStart": "subagent-start hook",
-    "SubagentStop": "subagent-stop hook",
     "Stop": "stop hook",
-    "Interrupt": "interrupt hook",
+    "PermissionRequest": "permission-request hook",
 }
-CODEX_BEST_EFFORT_HOOKS = {
-    "SessionEnd", "PermissionRequest", "PreCompact", "PostCompact",
-    "SubagentStart", "SubagentStop", "Interrupt",
-}
+CODEX_BEST_EFFORT_HOOKS = {"SessionEnd", "PermissionRequest"}
 
 
 def verify_hook_events(recorder, hook_log, agent="claude", events=None,
