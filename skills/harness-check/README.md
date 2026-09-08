@@ -236,7 +236,9 @@ inventoried at runtime and reported as conditional gaps when absent.
 
 CI lints every shell script with ShellCheck, smoke-tests the MCP fixture
 server's protocol surface, and runs the full agent-agnostic probe suite on
-every push and pull request. Run the same checks locally:
+every push and pull request. Run the same checks locally from the skill
+directory (the repository root when this skill is its own repo, or
+`skills/harness-check/` when it is vendored into a multi-skill repo):
 
 ```sh
 shellcheck -S warning scripts/*.sh
