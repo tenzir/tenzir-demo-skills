@@ -46,6 +46,7 @@ are not.
 | `codex.tool_decision` | each native tool call; include allowed and denied decisions | automatic except the user's allow/deny choice |
 | `codex.tool_result` | successful and failing native calls | automatic |
 | `codex.sandbox_outcome` | run shell work through the actual Codex sandbox; vary it with `run-child --sandbox read-only\|workspace-write\|danger-full-access` for distinct outcomes | automatic, one policy per run |
+| Codex hook registration and firing | a run-local `hooks.json` registers SessionStart, SessionEnd, PreToolUse, PostToolUse, PermissionRequest, PreCompact, PostCompact, UserPromptSubmit, SubagentStart, SubagentStop, Stop, and Interrupt; `--dangerously-bypass-hook-trust` runs the disposable fixture without persisted trust, and the hook log proves which fired | automatic; most events conditional |
 | `codex.skill.injected` | invoking this skill | automatic |
 | `codex.tool.call` | native tool calls | automatic |
 | `list_tools_for_server` | let the child Codex session discover the bundled fixture server | automatic |

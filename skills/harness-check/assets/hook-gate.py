@@ -23,11 +23,15 @@ import sys
 
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else "mark"
+    # An explicit event name (argv[2]) lets one handler log the right event
+    # regardless of how a given agent shapes its hook payload. Claude Code
+    # passes the event in the payload; Codex hooks pass it explicitly.
+    explicit = sys.argv[2] if len(sys.argv) > 2 else None
     try:
         payload = json.load(sys.stdin)
     except ValueError:
         payload = {}
-    event = payload.get("hook_event_name") or mode
+    event = explicit or payload.get("hook_event_name") or mode
     tool = payload.get("tool_name", "")
     command = str((payload.get("tool_input") or {}).get("command", ""))
     outcome = "ok"

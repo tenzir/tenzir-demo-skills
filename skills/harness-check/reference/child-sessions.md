@@ -82,7 +82,17 @@ Prompt it to call `harness_echo` once, run
 `apply_patch` for native file-lifecycle coverage, attempt native
 resource/prompt access when exposed, and return. Vary the sandbox with
 `run-child --sandbox read-only|workspace-write|danger-full-access` to produce
-distinct `codex.sandbox_outcome` values across runs. Do not use
+distinct `codex.sandbox_outcome` values across runs.
+
+Codex 0.153.4 also has a hook system. The driver writes a run-local
+`hooks.json` (from `assets/codex-hooks.json`, with `__SKILL__` resolved),
+passes it with `-c hooks="<path>"`, and adds `--dangerously-bypass-hook-trust`
+so the disposable fixture runs without persisted trust. Each hook invokes the
+same `hook-gate.py` marker with the event name passed explicitly, so the hook
+log records which of SessionStart, SessionEnd, PreToolUse, PostToolUse,
+PermissionRequest, PreCompact, PostCompact, UserPromptSubmit, SubagentStart,
+SubagentStop, Stop, and Interrupt actually fired. Only a few fire in an
+ephemeral exec child; the rest are best-effort. Do not use
 `--ignore-user-config`: startup observations for the user's real enabled apps,
 plugins, remote-plugin posture, approval policy, and sandbox policy are part
 of the workload. The overrides must not write the user's config.

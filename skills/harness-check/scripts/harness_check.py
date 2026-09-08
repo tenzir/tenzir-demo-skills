@@ -602,6 +602,20 @@ def materialize_claude_settings(directory):
         return template
 
 
+def materialize_codex_hooks(directory):
+    """Write a run-local Codex hooks.json with __SKILL__ resolved. Returns the
+    written path, or None when it cannot be produced."""
+    template = SKILL / "assets" / "codex-hooks.json"
+    try:
+        text = template.read_text(encoding="utf-8").replace(
+            "__SKILL__", str(SKILL))
+        out = directory / "child-codex-hooks.json"
+        out.write_text(text, encoding="utf-8")
+        return out
+    except OSError:
+        return None
+
+
 def start_http_fixture(directory):
     """Launch the loopback HTTP fixture. Returns (process, base_url, log_path)
     or (None, None, None) when it cannot start. The fixture logs every request
@@ -634,7 +648,7 @@ def start_http_fixture(directory):
 
 
 def child_command(agent, mcp_log, settings_path=None, session_id=None,
-                  http_url=None, sandbox_mode=None):
+                  http_url=None, sandbox_mode=None, codex_hooks_path=None):
     server = str(SKILL / "assets" / "mcp-server.py")
     if agent == "claude":
         mcp_config = json.dumps({"mcpServers": {"harness-check": {
@@ -675,6 +689,11 @@ def child_command(agent, mcp_log, settings_path=None, session_id=None,
     ]
     if sandbox_mode:
         codex_command += ["--sandbox", sandbox_mode]
+    if codex_hooks_path:
+        # Point Codex at the run-local hooks file and run it without persisted
+        # trust, since the fixture is disposable and never on the user's config.
+        codex_command += ["-c", f'hooks="{codex_hooks_path}"',
+                          "--dangerously-bypass-hook-trust"]
     codex_command += [
         "-c", 'mcp_servers.harness_check.command="python3"',
         "-c", f'mcp_servers.harness_check.args=["{server}","--log",'
@@ -725,6 +744,8 @@ def cmd_run_child(args):
     # verifiable server-side; neither simulates a native event.
     settings_path = (materialize_claude_settings(directory)
                      if agent == "claude" else None)
+    codex_hooks_path = (materialize_codex_hooks(directory)
+                        if agent == "codex" else None)
     http_proc, http_url, http_log = start_http_fixture(directory)
     session_id = str(uuid.uuid4()) if agent == "claude" else None
 
@@ -743,7 +764,8 @@ def cmd_run_child(args):
                 proc = subprocess.run(
                     child_command(agent, mcp_log, settings_path=settings_path,
                                   session_id=session_id, http_url=http_url,
-                                  sandbox_mode=getattr(args, "sandbox", None)),
+                                  sandbox_mode=getattr(args, "sandbox", None),
+                                  codex_hooks_path=codex_hooks_path),
                     cwd=workspace, env=env,
                     stdin=subprocess.DEVNULL, stdout=sink,
                     stderr=subprocess.STDOUT, timeout=600)
@@ -893,6 +915,13 @@ def cmd_run_child(args):
         # appear in one run.
         run_content_toggle_children(recorder, directory, env)
 
+    if agent == "codex":
+        # Which Codex hooks fired, from the same fixture hook log. Registration
+        # happened through the run-local hooks.json passed to the child.
+        verify_hook_events(recorder, hook_log, agent="codex",
+                           events=CODEX_HOOK_EVENTS,
+                           best_effort=CODEX_BEST_EFFORT_HOOKS)
+
     summary_ok = recorder.summary(f"child-{agent}")
     if not summary_ok:
         raise SystemExit(1)
@@ -936,8 +965,33 @@ BEST_EFFORT_HOOKS = {
 }
 
 
-def verify_hook_events(recorder, hook_log):
+# Codex 0.153.4 hook events, registered through a run-local hooks.json. Only a
+# few fire in an ephemeral exec child; the rest are best-effort.
+CODEX_HOOK_EVENTS = {
+    "SessionStart": "session-start hook",
+    "SessionEnd": "session-end hook",
+    "PreToolUse": "pre-tool hook",
+    "PostToolUse": "post-tool hook",
+    "PermissionRequest": "permission-request hook",
+    "PreCompact": "pre-compact hook",
+    "PostCompact": "post-compact hook",
+    "UserPromptSubmit": "prompt-submit hook",
+    "SubagentStart": "subagent-start hook",
+    "SubagentStop": "subagent-stop hook",
+    "Stop": "stop hook",
+    "Interrupt": "interrupt hook",
+}
+CODEX_BEST_EFFORT_HOOKS = {
+    "SessionEnd", "PermissionRequest", "PreCompact", "PostCompact",
+    "SubagentStart", "SubagentStop", "Interrupt",
+}
+
+
+def verify_hook_events(recorder, hook_log, agent="claude", events=None,
+                       best_effort=None):
     """Record which registered hook events fired, from the fixture hook log."""
+    events = events or HOOK_EVENTS
+    best_effort = BEST_EFFORT_HOOKS if best_effort is None else best_effort
     try:
         lines = hook_log.read_text(encoding="utf-8").splitlines()
     except OSError:
@@ -948,14 +1002,14 @@ def verify_hook_events(recorder, hook_log):
         parts = line.split("\t")
         if len(parts) >= 3:
             outcomes.setdefault(parts[0], parts[2])
-    for event, label in HOOK_EVENTS.items():
-        probe = f"child.claude.hook.{event.lower()}"
+    for event, label in events.items():
+        probe = f"child.{agent}.hook.{event.lower()}"
         if event in fired:
             detail = f"{label} fired"
             if outcomes.get(event) in ("deny", "fail"):
                 detail += f" ({outcomes[event]})"
             recorder.ok(probe, detail)
-        elif event in BEST_EFFORT_HOOKS:
+        elif event in best_effort:
             recorder.skip(probe, f"{label} not triggered in this child")
         else:
             recorder.skip(probe, f"{label} did not fire; inspect {hook_log}")
