@@ -1,0 +1,113 @@
+# Unavoidable user actions
+
+Before the first manual action, determine the entire applicable sequence and
+run `python3 scripts/harness_check.py operator prepare <id>...` exactly once.
+Reveal one action per turn. On each reply, observe and retain the result in
+the conversation, then advance without running Bash. After the final result,
+store all outcomes with one `operator batch-mark` command. Do not run
+`operator begin`, `operator mark`, `record`, or another bookkeeping command
+between manual steps.
+
+Do not ask the user to run commands, edit files, configure fixture servers, or
+restart a child harness when the agent can do that itself.
+
+## Approval denied
+
+Use `manual.approval-deny`. Tell the user only that the next prompt is a safe
+denial probe. Request approval for a harmless, reversible action that the
+current harness genuinely gates—for example a request against the bundled
+loopback fixture (`assets/http-server.py`), whose log confirms server-side
+whether the call went through, or an HTTP HEAD request through a
+network-restricted shell. Ask the user to decline the actual approval dialog.
+Do not use a destructive command or touch an existing file.
+
+In Claude Code, say explicitly: “Decline the approval dialog. When Claude asks
+what it should do instead, type `continue`.” The follow-up is required because
+denial ends the tool attempt and returns control to the user.
+
+## Approval accepted
+
+Use `manual.approval-allow`. Tell the user only that the next prompt is the
+safe acceptance probe. Request the equivalent harmless action and ask them to
+approve the actual dialog. Clean up any disposable artifact automatically.
+
+These two decisions require user input by definition. If the harness cannot
+produce a real approval dialog, retain `SKIP` for the final batch; do not
+imitate one in prose.
+After requesting approval, inspect the native result before waiting for a user
+reply. When an automatic reviewer resolves the request, immediately mark the
+corresponding `manual.*` result as `SKIP`, retain
+`automatic.approval-allow` or `automatic.approval-deny` as `PASS` for the final
+batch, and proceed. Never tell the user to reply after an automatic decision
+has already prevented the human dialog.
+
+## Agent-raised question
+
+Use `manual.claude.ask-question`. When the harness exposes a native
+question/choice tool, the agent can raise it but only the user answers, so it
+is a real prompt event with a required human decision. Ask exactly one
+throwaway multiple-choice question whose answer changes nothing (for example,
+which of two disposable labels to tag this run with), and wait. Record the
+answer as the observed result. Skip when the harness has no such tool, or when
+running fully autonomously where a blocking question would stall the workload.
+
+## Multi-agent workflow
+
+Use `manual.workflow.run`. A multi-agent workflow needs explicit user opt-in
+and can spawn many agents, so it is never launched autonomously for telemetry.
+Only when the user has asked for one, propose a minimal disposable workflow
+(one or two bounded agents that each return a marker), let the user approve it,
+and record the outcome. Otherwise retain `SKIP` and note that a workflow was
+not authorized.
+
+## Claude Code permission mode
+
+Claude Code emits a dedicated permission-mode-change event. Plan mode is
+reachable through the native plan-enter/plan-exit tools and is covered
+automatically in `agent-probes.md`; this manual step is only for a mode the
+agent cannot set itself. If that mode can be changed only through the
+interactive UI:
+
+1. Use `manual.claude.permission-mode` and ask the user to switch once to
+   `manual` with the native permission control. Wait.
+2. Run the approval denied and accepted probes above.
+3. Use `manual.claude.permission-restore` and ask the user to restore the
+   original mode. Wait.
+
+Skip the first change when already in `manual`, but still restore any mode the
+test changed. Never ask for a restart merely to change this live control.
+
+## Shell command typed with `!` (Claude Code)
+
+Use `manual.claude.shell-bang`. A shell command the user types with the `!`
+prefix runs in the session without passing through the agent, so the agent
+cannot trigger it. In Claude Code 2.1.245 this lands in two `user` transcript
+records wrapping `<bash-input>` and `<bash-stdout>` — not a `system` record
+with subtype `local_command`. This probe re-confirms that transcript surface
+on the running version and verifies whether the command also reaches OTEL.
+
+Resolve `<skill>` to its absolute path first, then ask the user to type
+exactly this at the Claude Code prompt and send it:
+
+```text
+!python3 <skill>/assets/bang-marker.py
+```
+
+It prints `harness-check-bang-marker` and exits. Retain that the marker
+appeared, then advance. During verification, treat a missing OTEL event for
+this marker as a finding to report, not a probe failure: the transcript
+`local_command` record may be the only surface it reaches. Record `SKIP` when
+the harness is not Claude Code, since `!` is Claude-specific.
+
+## Conditional UI-only configuration
+
+Only when encountered during autonomous probing:
+
+- `manual.codex.config-write`: when the running Codex product exposes an
+  authenticated UI/API configuration write that cannot be invoked by the
+  agent, ask the user to make one reversible test change, verify it, then ask
+  them to restore it in the next turn.
+
+Do not log out, install software, change credentials, or restart the user's
+main session merely to broaden the workload. Real child sessions cover
+startup and lifecycle activity without disrupting the main session.
