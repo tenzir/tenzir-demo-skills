@@ -24,7 +24,8 @@ are not.
 | `user` records wrapping `<bash-input>`/`<bash-stdout>` (shell typed with `!`) | the user types a `!`-prefixed shell command | user-only interactive control |
 | `plugin_loaded` | load a real installed or session-scoped fixture plugin | automatic with `--plugin-dir` in a child Claude session |
 | `hook_registered` | start a real child Claude session with the fixture hook configuration | automatic |
-| `hook_execution_start` / `hook_execution_complete` | the child fires PreToolUse, PostToolUse, UserPromptSubmit, SessionStart, SessionEnd, Stop, plus best-effort PreCompact and Notification fixture hooks; the hook log proves which fired | automatic, PreCompact and Notification conditional |
+| `hook_registered` (broad) | the fixture registers PreToolUse, PostToolUse, PostToolUseFailure, UserPromptSubmit, SessionStart, SessionEnd, Stop, SubagentStart, SubagentStop, PreCompact, PostCompact, Notification, PermissionRequest, PermissionDenied, PreModelSwitch, PostModelSwitch, ConfigChange, WorktreeCreate, and WorktreeRemove hooks, all recognized by the installed CLI | automatic at session start |
+| `hook_execution_start` / `hook_execution_complete` | PreToolUse, PostToolUse, UserPromptSubmit, SessionStart, and Stop fire in a normal child; the rest fire only on their triggering action and are recorded from the hook log as best-effort skips when absent | automatic, most events conditional |
 | `api_error` | a child whose API base URL points at a closed loopback port; the first model request fails to connect | automatic, no credential sent |
 | `user_prompt` / `tool_decision` content shapes | the child repeats a trivial turn with prompt and tool-detail logging redacted and then verbose | automatic |
 | `retention_sweep` | context compaction, reached only if the session compacts | conditional; the PreCompact hook marks it best-effort |

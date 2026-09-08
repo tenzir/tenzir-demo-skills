@@ -908,13 +908,32 @@ HOOK_EVENTS = {
     "SubagentStop": "subagent-stop hook",
     "PreCompact": "pre-compact hook",
     "Notification": "notification hook",
+    # Additional events recognized by Claude Code 2.1.260. Registration always
+    # emits a hook_registered event; firing depends on the child taking the
+    # matching action, so these are best-effort below.
+    "PostToolUseFailure": "post-tool-failure hook",
+    "PostCompact": "post-compact hook",
+    "PermissionRequest": "permission-request hook",
+    "PermissionDenied": "permission-denied hook",
+    "SubagentStart": "subagent-start hook",
+    "PreModelSwitch": "pre-model-switch hook",
+    "PostModelSwitch": "post-model-switch hook",
+    "ConfigChange": "config-change hook",
+    "WorktreeCreate": "worktree-create hook",
+    "WorktreeRemove": "worktree-remove hook",
 }
 
 # Hooks that fire only under a condition this short child rarely reaches
-# (a subagent stopping, the session ending inside the captured window,
-# context compaction, or a permission notification). A miss is a clean skip,
-# not a failure.
-BEST_EFFORT_HOOKS = {"SubagentStop", "SessionEnd", "PreCompact", "Notification"}
+# (a subagent lifecycle, the session ending inside the captured window,
+# context compaction, a notification, a permission prompt, a model switch, a
+# config change, or a worktree op). Registration still counts; a firing miss
+# is a clean skip, not a failure.
+BEST_EFFORT_HOOKS = {
+    "SubagentStop", "SessionEnd", "PreCompact", "Notification",
+    "PostToolUseFailure", "PostCompact", "PermissionRequest",
+    "PermissionDenied", "SubagentStart", "PreModelSwitch", "PostModelSwitch",
+    "ConfigChange", "WorktreeCreate", "WorktreeRemove",
+}
 
 
 def verify_hook_events(recorder, hook_log):
