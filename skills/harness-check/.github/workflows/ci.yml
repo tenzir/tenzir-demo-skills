@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint all shell scripts
+        run: shellcheck -S warning scripts/*.sh
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile the CLI and the bundled Python assets
+        run: |
+          python3 -m py_compile scripts/harness_check.py \
+            assets/mcp-server.py assets/bang-marker.py
+      - name: Run the MCP fixture protocol smoke test
+        run: python3 tests/mcp-server-smoke.py
+      - name: Check the bang-marker asset emits its marker
+        run: |
+          python3 assets/bang-marker.py | grep -q harness-check-bang-marker
+
+  scripted-probes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the agent-agnostic probe suite
+        run: |
+          export HARNESS_CHECK_DIR=$(python3 scripts/harness_check.py new-run generic)
+          bash scripts/run-all.sh
+          python3 scripts/harness_check.py record PASS ci.record "recorded from CI"
+          python3 scripts/harness_check.py summarize
+          bash scripts/run-all.sh --clean
+      - name: Run the read-only entry points without a run directory
+        run: |
+          python3 scripts/harness_check.py operator list
+          python3 scripts/harness_check.py inventory --tsv --agent claude
+      - name: Refuse stateful commands without a run directory
+        run: |
+          if python3 scripts/harness_check.py record PASS ci.must-not-run; then
+            echo "record must refuse to run without HARNESS_CHECK_DIR" >&2
+            exit 1
+          fi
